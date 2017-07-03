@@ -190,9 +190,11 @@ $.extend(Selectize.prototype, {
 
 		$dropdown.on('mouseenter mousedown mouseup click', '[data-disabled]>[data-selectable]', function(e) { e.stopImmediatePropagation(); });
 		$dropdown.on('mouseenter', '[data-selectable]', function() { return self.onOptionHover.apply(self, arguments); });
-		$dropdown.on('mouseup click', '[data-selectable]', function() { return self.onOptionSelect.apply(self, arguments); });
-		watchChildEvent($control, 'mouseup', '*:not(input)', function() { return self.onItemSelect.apply(self, arguments); });
-		autoGrow($control_input);
+		$dropdown.on('mousedown click', '[data-selectable]', function() { return self.onOptionSelect.apply(self, arguments); });
+		watchChildEvent($control, 'mousedown', '*:not(input)', function() { return self.onItemSelect.apply(self, arguments); });
+		if (this.$input.attr('multiple')) {
+			autoGrow($control_input);
+		}
 
 		$control.on({
 			mousedown : function() { return self.onMouseDown.apply(self, arguments); },
