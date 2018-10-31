@@ -454,6 +454,26 @@
 		dir = computedStyle ? computedStyle.getPropertyValue('direction') : input.currentStyle && input.currentStyle.direction;
 		dir = dir || $input.parents('[dir]:first').attr('dir') || '';
 	
+	
+		/**
+		 * Wraps `fn` so that it can only be called once
+		 * every `delay` milliseconds (invoked on the falling edge).
+		 *
+		 * @param {function} fn
+		 * @param {int} delay
+		 * @returns {function}
+		 */
+		var search_debounce = function(fn, delay) {
+			var timeout;
+			return function() {
+				var args = arguments;
+				window.clearTimeout(self.search_timeout);
+				self.search_timeout = window.setTimeout(function() {
+					fn.apply(self, args);
+				}, delay);
+			};
+		};
+	
 		// setup default state
 		$.extend(self, {
 			order            : 0,
@@ -494,7 +514,7 @@
 			userOptions      : {},
 			items            : [],
 			renderCache      : {},
-			onSearchChange   : settings.loadThrottle === null ? self.onSearchChange : debounce(self.onSearchChange, settings.loadThrottle)
+			onSearchChange   : settings.loadThrottle === null ? self.onSearchChange : search_debounce(self.onSearchChange, settings.loadThrottle)
 		});
 	
 		// search system
