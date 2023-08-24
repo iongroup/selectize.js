@@ -1322,7 +1322,7 @@ $.extend(Selectize.prototype, {
 	 */
 	registerOption: function(data) {
 		var key = hash_key(data[this.settings.valueField]);
-		if (typeof key === 'undefined' || key === null || this.options.hasOwnProperty(key)) return false;
+		if ((!this.settings.allowEmptyOption && !key) || typeof key === 'undefined' || key === null || this.options.hasOwnProperty(key)) return false;
 		data.$order = data.$order || ++this.order;
 		this.options[key] = data;
 		return key;
