@@ -1,12 +1,14 @@
 var Selectize = function($input, settings) {
-	var key, i, n, dir, input, self = this;
+	var key, i, n, dir = 'ltr', input, self = this;
 	input = $input[0];
 	input.selectize = self;
 
-	// detect rtl environment
-	var computedStyle = window.getComputedStyle && window.getComputedStyle(input, null);
-	dir = computedStyle ? computedStyle.getPropertyValue('direction') : input.currentStyle && input.currentStyle.direction;
-	dir = dir || $input.parents('[dir]:first').attr('dir') || '';
+	// detect rtl environment, added flag to avoid unnecessary DOM operation if RTL is not supported, by default supportTextDirectionRtl = false
+	if (settings.supportTextDirectionRtl) {
+		var computedStyle = window.getComputedStyle && window.getComputedStyle(input, null);
+		dir = computedStyle ? computedStyle.getPropertyValue('direction') : input.currentStyle && input.currentStyle.direction;
+		dir = dir || $input.parents('[dir]:first').attr('dir') || '';
+	}
 
 	// setup default state
 	$.extend(self, {
@@ -127,7 +129,7 @@ $.extend(Selectize.prototype, {
 		$control          = $('<div>').addClass(settings.inputClass + ' selectize-input items').appendTo($wrapper);
 		$control_input    = $('<input type="select-one" autocomplete="new-password" autofill="no" />').appendTo($control).attr('tabindex', $input.is(':disabled') ? '-1' : self.tabIndex);
 		$dropdown_parent  = $(settings.dropdownParent || $wrapper);
-		$dropdown         = $('<div>').addClass(settings.dropdownClass).addClass(inputMode + ' selectize-dropdown').hide().appendTo($dropdown_parent);
+		$dropdown         = $('<div>').addClass(settings.dropdownClass).addClass(inputMode + ' selectize-dropdown').hide();
 		$dropdown_content = $('<div>').addClass(settings.dropdownContentClass + ' selectize-dropdown-content').attr('tabindex', '-1').appendTo($dropdown);
 
 		if(inputId = $input.attr('id')) {
@@ -191,9 +193,6 @@ $.extend(Selectize.prototype, {
 		$dropdown.on('mouseenter', '[data-selectable]', function() { return self.onOptionHover.apply(self, arguments); });
 		$dropdown.on('mousedown click', '[data-selectable]', function() { return self.onOptionSelect.apply(self, arguments); });
 		watchChildEvent($control, 'mousedown', '*:not(input)', function() { return self.onItemSelect.apply(self, arguments); });
-		if (this.$input.attr('multiple')) {
-			autoGrow($control_input);
-		}
 
 		$control.on({
 			mousedown : function() { return self.onMouseDown.apply(self, arguments); },
@@ -281,6 +280,11 @@ $.extend(Selectize.prototype, {
 		self.refreshItems();
 		self.refreshState();
 		self.updatePlaceholder();
+		// performing auto grow input at the end of setup so that it is performed only once during the selectize init e.g. above updatePlaceholder() call was triggering auto grow calculation again
+		// it also registers to auto grow on text update
+		if (this.$input.attr('multiple')) {
+			autoGrow($control_input);
+		}
 		self.isSetup = true;
 
 		if ($input.is(':disabled')) {
@@ -292,12 +296,11 @@ $.extend(Selectize.prototype, {
 		$input.data('selectize', self);
 		$input.addClass('selectized');
 		self.trigger('initialize');
-
+		$dropdown && $dropdown.appendTo($dropdown_parent);
 		// preload options
 		if (settings.preload === true) {
 			self.onSearchChange('');
 		}
-
 	},
 
 	/**

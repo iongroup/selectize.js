@@ -217,9 +217,7 @@ var getInputSelection = function (input) {
 var transferStyles = function ($from, $to, properties) {
   var i, n, styles = {};
   if (properties) {
-    for (i = 0, n = properties.length; i < n; i++) {
-      styles[properties[i]] = $from.css(properties[i]);
-    }
+    styles = $from.css(properties);
   } else {
     styles = $from.css();
   }
@@ -247,12 +245,13 @@ var measureString = function (str, $parent) {
       whiteSpace: 'pre'
     });
 
-    $('<div />').css({
+    var div = $('<div />');
+    var test = div.css({
       position: 'absolute',
       width: 0,
       height: 0,
       overflow: 'hidden'
-    }).append(Selectize.$testInput).appendTo('body');
+    }).append(Selectize.$testInput);
   }
 
   Selectize.$testInput.text(str);
@@ -264,7 +263,7 @@ var measureString = function (str, $parent) {
     'fontWeight',
     'textTransform'
   ]);
-
+  test && test.appendTo('body');
   return Selectize.$testInput.width();
 };
 
@@ -319,7 +318,7 @@ var autoGrow = function ($input) {
       }
     }
 
-    placeholder = $input.attr('placeholder');
+    placeholder = $input.get(0).getAttribute('placeholder');
     if (placeholder) {
       placeholderWidth = measureString(placeholder, $input) + 4;
     } else {
