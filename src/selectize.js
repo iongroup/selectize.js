@@ -1427,6 +1427,7 @@ $.extend(Selectize.prototype, {
 			$item_new = $(self.render('item', data));
 			if ($item.hasClass('active')) $item_new.addClass('active');
 			$item.replaceWith($item_new);
+			self.trigger('item_update', value_new, $item_new);
 		}
 
 		// invalidate last query because we might have updated the sortField
