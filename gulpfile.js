@@ -81,7 +81,8 @@ const license_header = `/**
 const ejs_header = `import $ from "jquery";
 `;
 
-const ejs_footer = ``;
+const ejs_footer = `export default Selectize;
+`;
 
 async function _copyLibs() {
   'use strict';

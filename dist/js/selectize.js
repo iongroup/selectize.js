@@ -1,5 +1,5 @@
 /**
- * Selectize (v0.15.2-d6)
+ * Selectize (v0.15.2-d7)
  * https://selectize.dev
  *
  * Copyright (c) 2013-2015 Brian Reavis & contributors
@@ -4483,3 +4483,4 @@ Selectize.define('tag_limit', function (options) {
         };
     })()
 });
+export default Selectize;
