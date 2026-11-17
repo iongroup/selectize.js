@@ -78,22 +78,10 @@ const license_header = `/**
  */
 `;
 
-const amd_header = `(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define(['jquery'], factory);
-  } else if (typeof module === 'object' && typeof module.exports === 'object') {
-    module.exports = factory(require('jquery'));
-  } else {
-    root.Selectize = factory(root.jQuery);
-  }
-}(this, function ($) {
-  'use strict';
+const ejs_header = `import $ from "jquery";
 `;
 
-const amd_footer = `
-  return Selectize;
-}));
-`
+const ejs_footer = ``;
 
 async function _copyLibs() {
   'use strict';
@@ -128,8 +116,8 @@ const __fixScssDeprecations = lazypipe()
 
 const __wrapScripts = lazypipe()
   .pipe(wrapper, {
-    header: amd_header,
-    footer: amd_footer
+    header: ejs_header,
+    footer: ejs_footer
   })
   .pipe(wrapper, { header: license_header })
   .pipe(replace, /@@YEAR/g, getYear())

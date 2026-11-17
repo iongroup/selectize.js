@@ -1,9 +1,9 @@
 /**
- * Selectize (v0.15.2)
+ * Selectize (v0.15.2-d6)
  * https://selectize.dev
  *
  * Copyright (c) 2013-2015 Brian Reavis & contributors
- * Copyright (c) 2020-2022 Selectize Team & contributors
+ * Copyright (c) 2020-2026 Selectize Team & contributors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
  * file except in compliance with the License. You may obtain a copy of the License at:
@@ -17,16 +17,7 @@
  * @author Brian Reavis <brian@thirdroute.com>
  * @author Ris Adams <selectize@risadams.com>
  */
-(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define(['jquery'], factory);
-  } else if (typeof module === 'object' && typeof module.exports === 'object') {
-    module.exports = factory(require('jquery'));
-  } else {
-    root.Selectize = factory(root.jQuery);
-  }
-}(this, function ($) {
-  'use strict';
+import $ from "jquery";
 /**
  * highlight v3 | MIT license | Johann Burkard <jb@eaio.com>
  * Highlights arbitrary terms in a node.
@@ -1000,9 +991,7 @@ var getInputSelection = function (input) {
 var transferStyles = function ($from, $to, properties) {
   var i, n, styles = {};
   if (properties) {
-    for (i = 0, n = properties.length; i < n; i++) {
-      styles[properties[i]] = $from.css(properties[i]);
-    }
+    styles = $from.css(properties);
   } else {
     styles = $from.css();
   }
@@ -1030,12 +1019,13 @@ var measureString = function (str, $parent) {
       whiteSpace: 'pre'
     });
 
-    $('<div />').css({
+    var div = $('<div />');
+    var test = div.css({
       position: 'absolute',
       width: 0,
       height: 0,
       overflow: 'hidden'
-    }).append(Selectize.$testInput).appendTo('body');
+    }).append(Selectize.$testInput);
   }
 
   Selectize.$testInput.text(str);
@@ -1047,7 +1037,7 @@ var measureString = function (str, $parent) {
     'fontWeight',
     'textTransform'
   ]);
-
+  test && test.appendTo('body');
   return Selectize.$testInput.width();
 };
 
@@ -1102,7 +1092,7 @@ var autoGrow = function ($input) {
       }
     }
 
-    placeholder = $input.attr('placeholder');
+    placeholder = $input.get(0).getAttribute('placeholder');
     if (placeholder) {
       placeholderWidth = measureString(placeholder, $input) + 4;
     } else {
@@ -1158,14 +1148,16 @@ var isJSON = function (data) {
 };
 
 var Selectize = function($input, settings) {
-	var key, i, n, dir, input, self = this;
+	var key, i, n, dir = 'ltr', input, self = this;
 	input = $input[0];
 	input.selectize = self;
 
-	// detect rtl environment
-	var computedStyle = window.getComputedStyle && window.getComputedStyle(input, null);
-	dir = computedStyle ? computedStyle.getPropertyValue('direction') : input.currentStyle && input.currentStyle.direction;
-	dir = dir || $input.parents('[dir]:first').attr('dir') || '';
+	// detect rtl environment, added flag to avoid unnecessary DOM operation if RTL is not supported, by default supportTextDirectionRtl = false
+	if (settings.supportTextDirectionRtl) {
+		var computedStyle = window.getComputedStyle && window.getComputedStyle(input, null);
+		dir = computedStyle ? computedStyle.getPropertyValue('direction') : input.currentStyle && input.currentStyle.direction;
+		dir = dir || $input.parents('[dir]:first').attr('dir') || '';
+	}
 
 	// setup default state
 	$.extend(self, {
@@ -1197,7 +1189,6 @@ var Selectize = function($input, settings) {
 		currentResults   : null,
 		lastValue        : '',
 		lastValidValue   : '',
-		lastOpenTarget   : false,
 		caretPos         : 0,
 		loading          : 0,
 		loadedSearches   : {},
@@ -1287,7 +1278,7 @@ $.extend(Selectize.prototype, {
 		$control          = $('<div>').addClass(settings.inputClass + ' selectize-input items').appendTo($wrapper);
 		$control_input    = $('<input type="select-one" autocomplete="new-password" autofill="no" />').appendTo($control).attr('tabindex', $input.is(':disabled') ? '-1' : self.tabIndex);
 		$dropdown_parent  = $(settings.dropdownParent || $wrapper);
-		$dropdown         = $('<div>').addClass(settings.dropdownClass).addClass(inputMode + ' selectize-dropdown').hide().appendTo($dropdown_parent);
+		$dropdown         = $('<div>').addClass(settings.dropdownClass).addClass(inputMode + ' selectize-dropdown').hide();
 		$dropdown_content = $('<div>').addClass(settings.dropdownContentClass + ' selectize-dropdown-content').attr('tabindex', '-1').appendTo($dropdown);
 
 		if(inputId = $input.attr('id')) {
@@ -1349,9 +1340,8 @@ $.extend(Selectize.prototype, {
 
 		$dropdown.on('mouseenter mousedown mouseup click', '[data-disabled]>[data-selectable]', function(e) { e.stopImmediatePropagation(); });
 		$dropdown.on('mouseenter', '[data-selectable]', function() { return self.onOptionHover.apply(self, arguments); });
-		$dropdown.on('mouseup click', '[data-selectable]', function() { return self.onOptionSelect.apply(self, arguments); });
-		watchChildEvent($control, 'mouseup', '*:not(input)', function() { return self.onItemSelect.apply(self, arguments); });
-		autoGrow($control_input);
+		$dropdown.on('mousedown click', '[data-selectable]', function() { return self.onOptionSelect.apply(self, arguments); });
+		watchChildEvent($control, 'mousedown', '*:not(input)', function() { return self.onItemSelect.apply(self, arguments); });
 
 		$control.on({
 			mousedown : function() { return self.onMouseDown.apply(self, arguments); },
@@ -1359,14 +1349,10 @@ $.extend(Selectize.prototype, {
 		});
 
 		$control_input.on({
-			mousedown : function(e) {
-				if (self.$control_input.val() !== '' || self.settings.openOnFocus) {
-					e.stopPropagation();
-				}
-			},
+			mousedown : function(e) { e.stopPropagation(); },
 			keydown   : function() { return self.onKeyDown.apply(self, arguments); },
+			keyup     : function() { return self.onKeyUp.apply(self, arguments); },
 			keypress  : function() { return self.onKeyPress.apply(self, arguments); },
-			input     : function() { return self.onInput.apply(self, arguments); },
 			resize    : function() { self.positionDropdown.apply(self, []); },
 			// blur      : function() { return self.onBlur.apply(self, arguments); },
 			focus     : function() { self.ignoreBlur = false; return self.onFocus.apply(self, arguments); },
@@ -1443,6 +1429,11 @@ $.extend(Selectize.prototype, {
 		self.refreshItems();
 		self.refreshState();
 		self.updatePlaceholder();
+		// performing auto grow input at the end of setup so that it is performed only once during the selectize init e.g. above updatePlaceholder() call was triggering auto grow calculation again
+		// it also registers to auto grow on text update
+		if (this.$input.attr('multiple')) {
+			autoGrow($control_input);
+		}
 		self.isSetup = true;
 
 		if ($input.is(':disabled')) {
@@ -1454,12 +1445,11 @@ $.extend(Selectize.prototype, {
 		$input.data('selectize', self);
 		$input.addClass('selectized');
 		self.trigger('initialize');
-
+		$dropdown && $dropdown.appendTo($dropdown_parent);
 		// preload options
 		if (settings.preload === true) {
 			self.onSearchChange('');
 		}
-
 	},
 
 	/**
@@ -1569,39 +1559,35 @@ $.extend(Selectize.prototype, {
 		var defaultPrevented = e.isDefaultPrevented();
 		var $target = $(e.target);
 
-		if (!self.isFocused) {
+		if (self.isFocused) {
+			// retain focus by preventing native handling. if the
+			// event target is the input it should not be modified.
+			// otherwise, text selection within the input won't work.
+			if (e.target !== self.$control_input[0]) {
+				if (self.settings.mode === 'single') {
+					// toggle dropdown
+					self.isOpen ? self.close() : self.open();
+
+					// when closing the dropdown, we set a isDropdownClosing
+					// varible temporaily to prevent the dropdown from reopening
+					// from the onClick event
+					self.isDropdownClosing = true;
+					setTimeout(function() {
+						self.isDropdownClosing = false;
+					}, self.settings.closeDropdownThreshold);
+
+				} else if (!defaultPrevented) {
+					self.setActiveItem(null);
+				}
+				return false;
+			}
+		} else {
 			// give control focus
 			if (!defaultPrevented) {
 				window.setTimeout(function() {
 					self.focus();
 				}, 0);
 			}
-		}
-		// retain focus by preventing native handling. if the
-		// event target is the input it should not be modified.
-		// otherwise, text selection within the input won't work.
-		if (e.target !== self.$control_input[0] || self.$control_input.val() === '') {
-			if (self.settings.mode === 'single') {
-				// toggle dropdown
-				self.isOpen ? self.close() : self.open();
-			} else {
-				if (!defaultPrevented) {
-						self.setActiveItem(null);
-				}
-				if (!self.settings.openOnFocus) {
-					if (self.isOpen && e.target === self.lastOpenTarget) {
-						self.close();
-						self.lastOpenTarget = false;
-					} else if (!self.isOpen) {
-						self.refreshOptions();
-						self.open();
-						self.lastOpenTarget = e.target;
-					} else {
-						self.lastOpenTarget = e.target;
-					}
-				}
-			}
-			return false;
 		}
 	},
 
@@ -1760,14 +1746,15 @@ $.extend(Selectize.prototype, {
 	},
 
 	/**
-	 * Triggered on <input> input.
+	 * Triggered on <input> keyup.
 	 *
 	 * @param {object} e
 	 * @returns {boolean}
 	 */
-	onInput: function(e) {
+	onKeyUp: function(e) {
 		var self = this;
 
+		if (self.isLocked) return e && e.preventDefault();
 		var value = self.$control_input.val() || '';
 		if (self.lastValue !== value) {
 			self.lastValue = value;
@@ -2479,7 +2466,7 @@ $.extend(Selectize.prototype, {
 	 */
 	registerOption: function(data) {
 		var key = hash_key(data[this.settings.valueField]);
-		if (typeof key === 'undefined' || key === null || this.options.hasOwnProperty(key)) return false;
+		if ((!this.settings.allowEmptyOption && !key) || typeof key === 'undefined' || key === null || this.options.hasOwnProperty(key)) return false;
 		data.$order = data.$order || ++this.order;
 		this.options[key] = data;
 		return key;
@@ -2589,6 +2576,7 @@ $.extend(Selectize.prototype, {
 			$item_new = $(self.render('item', data));
 			if ($item.hasClass('active')) $item_new.addClass('active');
 			$item.replaceWith($item_new);
+			self.trigger('item_update', value_new, $item_new);
 		}
 
 		// invalidate last query because we might have updated the sortField
@@ -4495,6 +4483,3 @@ Selectize.define('tag_limit', function (options) {
         };
     })()
 });
-
-  return Selectize;
-}));
